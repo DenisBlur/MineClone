@@ -39,7 +39,7 @@ public:
 
 	UPROPERTY(EditAnywhere, Category="World")
 	int DrawDistance = 5;
-
+	
 	UFUNCTION(BlueprintCallable, Category="Chunk")
 	void ModifyVoxel(const FVector Position, const FVector Normal, EBlock Block);
 	

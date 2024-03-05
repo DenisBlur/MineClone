@@ -30,7 +30,6 @@ public:
 	float WaterLevel = 44.5;
 	int Seed;
 	float Frequency;
-	bool HasWater = false;
 	
 	UPROPERTY()
 	UStaticMesh* Water;
@@ -58,6 +57,8 @@ private:
 	TObjectPtr<FastNoiseLite> Moisture;
 	TObjectPtr<FastNoiseLite> Altitude;
 	TObjectPtr<FastNoiseLite> CaveNoise;
+
+	TArray<FChunkMeshData> BlocksMeshData;
 
 	UPROPERTY()
 	UStaticMeshComponent* StaticMeshComponent;
