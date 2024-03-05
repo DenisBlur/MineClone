@@ -55,9 +55,9 @@ void AChunk::BeginPlay()
 	Altitude->SetFractalOctaves(20);
 
 	CaveNoise->SetSeed(Seed);
-	CaveNoise->SetFrequency(0.03);
+	CaveNoise->SetFrequency(0.01);
 	CaveNoise->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-	CaveNoise->SetFractalType(FastNoiseLite::FractalType_FBm);
+	CaveNoise->SetFractalType(FastNoiseLite::FractalType_PingPong);
 	CaveNoise->SetFractalOctaves(2);
 
 	GenerateBiomes();
@@ -213,7 +213,7 @@ void AChunk::GenerateBiomes()
 			const auto Temp = 2 * abs(Temperature->GetNoise(Xpos, Ypos));
 			const auto Moist = 2 * abs(Moisture->GetNoise(Xpos, Ypos));
 
-			int Height = FMath::Clamp(FMath::RoundToInt((Noise->GetNoise(Xpos, Ypos) + 1) * Size.Z / 2), 1,
+			int Height = 120 + FMath::Clamp(FMath::RoundToInt((Noise->GetNoise(Xpos, Ypos) + 1) * Size.Z / 6), 1,
 			                          Size.Z);
 
 
@@ -250,9 +250,9 @@ void AChunk::GenerateBiomes()
 					BlocksNew.Add(FIntVector(x, y, z), EBlock::Stone);
 
 					const float Zpos = (z * 100 + Location.Z) / 100;
-					float Cave = FMath::Clamp(CaveNoise->GetNoise(Xpos, Ypos, Zpos), 0.0, 1.0);
+					float Cave = FMath::Clamp(CaveNoise->GetNoise(Xpos, Ypos, Zpos), -1.0, 1.0);
 
-					if (Cave == 0.5)
+					if (Cave <= 0)
 					{
 						BlocksNew.Add(FIntVector(x, y, z), EBlock::Air);
 					}
