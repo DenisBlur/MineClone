@@ -22,12 +22,6 @@ public:
 	UPROPERTY(EditInstanceOnly, Category="Chunk")
 	TObjectPtr<UMaterialInterface> Material;
 
-	UPROPERTY(EditInstanceOnly, Category="Chunk")
-	TObjectPtr<UMaterialInterface> WaterMaterial;
-
-	UPROPERTY(EditInstanceOnly, Category="Chunk")
-	UStaticMesh* Water;
-
 	UPROPERTY(EditAnywhere, Category="Chunk")
 	float Frequency = 0.03f;
 
@@ -46,6 +40,7 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	
 private:
 
 	UPROPERTY()

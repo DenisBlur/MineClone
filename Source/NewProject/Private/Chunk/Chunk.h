@@ -25,66 +25,80 @@ class AChunk : public AActor
 public:
 	AChunk();
 
-	FIntVector Size = FIntVector(16, 16, 128);
+	//Base setting for Chunk Size chunk (Default 16 x 16 x 128) set from ChunkManager
+	FIntVector Size;
 
-	float WaterLevel = 44.5;
-	int Seed;
+	//Base setting set spawn water from Level set from ChunkManager
+	float WaterLevel;
+
+	//Noise setting set from ChunkManager
 	float Frequency;
+	int Seed;
 	
-	UPROPERTY()
-	UStaticMesh* Water;
-
+	//Block material set from ChunkManager
 	UPROPERTY()
 	TObjectPtr<UMaterialInterface> Material;
-	UPROPERTY()
-	TObjectPtr<UMaterialInterface> WaterMaterial;
-	
+
+	//Change block type 
 	UFUNCTION(BlueprintCallable, Category="Chunk")
 	void ModifyVoxel(const FIntVector Position, EBlock Block);
 	
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-	void GenerateTrees();
-	void GenerateBiomes();
 
 private:
-	
+	//Main mesh
 	TObjectPtr<UProceduralMeshComponent> Mesh;
 
+	//All noise for Height and Biomes
 	TObjectPtr<FastNoiseLite> Noise;
 	TObjectPtr<FastNoiseLite> Temperature;
 	TObjectPtr<FastNoiseLite> Moisture;
 	TObjectPtr<FastNoiseLite> Altitude;
 	TObjectPtr<FastNoiseLite> CaveNoise;
-
-	TArray<FChunkMeshData> BlocksMeshData;
-
-	UPROPERTY()
-	UStaticMeshComponent* StaticMeshComponent;
 	
+	//Have MeshData Vertices Triangles and more
 	FChunkMeshData MeshData;
 
+	//Map have Position block in Chunk and have Type Block (Air, Dirt, Grass, Stone, .....)
 	TMap<FIntVector, EBlock> BlocksNew = TMap<FIntVector, EBlock>();
-	
+
+	//Count VertexCount
 	int VertexCount = 0;
 
+	//Its not work :(
+	void GenerateTrees();
+
+	//Generate blocks with biomes use five Noises
+	void GenerateBiomes();
+
+	//Old generate blocks, use only one Noise* 
 	void GenerateBlocks();
 
+	//Applay MeshData to Mesh*
 	void ApplyMesh() const;
 
+	//Clear MeshData and Vertex Count
 	void ClearMesh();
-	
+
+	//Generate Greedy Mesh
 	void GenerateMesh();
 
+	//Create Quad
 	void CreateQuad(FMask Mask, const int Width, const int Height, FIntVector AxisMask, FIntVector V1, FIntVector V2,
 	                FIntVector V3, FIntVector V4);
-
-	int GetBlockIndex(int X, int Y, int Z) const;
-
+	
+	//Get Block by (int) Vector ID 
 	EBlock GetBlock(FIntVector Index) const;
 
+	//Check Mask
 	static bool CompareMask(FMask M1, FMask M2);
+
+	//Get Texture Index for material
 	static int GetTextureIndex(EBlock Block, const FVector& Normal);
 	static int GetTextureOverlay(EBlock Block, const FVector& Normal);
+
+	void CheckBlockPhysic(FIntVector Position, EBlock Block);
+	void SpawnEntityBlock(FIntVector Position);
 };

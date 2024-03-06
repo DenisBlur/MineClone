@@ -14,7 +14,10 @@ AChunk::AChunk()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
+	//Create Mesh in Actor 
 	Mesh = CreateDefaultSubobject<UProceduralMeshComponent>("Mesh");
+
+	//Init Noises
 	Noise = new FastNoiseLite();
 	Temperature = new FastNoiseLite;
 	Moisture = new FastNoiseLite;
@@ -23,7 +26,8 @@ AChunk::AChunk()
 
 	//Init Blocks
 	BlocksNew = TMap<FIntVector, EBlock>();
-	BlocksMeshData = TArray<FChunkMeshData>();
+
+	SetRootComponent(Mesh);
 }
 
 // Called when the game starts or when spawned
@@ -31,6 +35,7 @@ void AChunk::BeginPlay()
 {
 	Super::BeginPlay();
 
+	//Setup Noises start
 	Noise->SetSeed(Seed);
 	Noise->SetFrequency(Frequency);
 	Noise->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
@@ -60,70 +65,15 @@ void AChunk::BeginPlay()
 	CaveNoise->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
 	CaveNoise->SetFractalType(FastNoiseLite::FractalType_PingPong);
 	CaveNoise->SetFractalOctaves(2);
+	//Setup Noises end
 
+
+	//Generate Blocks (Biomes) and GenerateMesh
 	GenerateBiomes();
-	//GenerateTrees();
 	GenerateMesh();
 	ApplyMesh();
 }
 
-void AChunk::ModifyVoxel(const FIntVector Position, EBlock Block)
-{
-	if (BlocksNew.Find(Position))
-	{
-		if (const auto DownVector = Position + static_cast<FIntVector>(FVector::DownVector); BlocksNew.Find(DownVector)
-			&& BlocksNew[DownVector] == EBlock::Air && Block == EBlock::Sand)
-		{
-			const auto Transform = FTransform(FRotator::ZeroRotator,
-			                                  FVector(
-				                                  (GetActorLocation().X + Position.X * 100) + 50,
-				                                  (GetActorLocation().Y + Position.Y * 100) + 50,
-				                                  (GetActorLocation().Z + Position.Z * 100) + 50),
-			                                  FVector::OneVector);
-			const auto SpawnEntity = GetWorld()->SpawnActorDeferred<ABlockEntity>(
-				ABlockEntity::StaticClass(), Transform, this);
-
-			UGameplayStatics::FinishSpawningActor(SpawnEntity, Transform);
-		}
-		else
-		{
-			BlocksNew[Position] = Block;
-
-			if (Block == EBlock::Air)
-			{
-				auto LocalPosition = Position;
-				for (int i = Position.Z; i < Size.Z; i++)
-				{
-					auto UpVector = LocalPosition + static_cast<FIntVector>(FVector::UpVector);
-
-					if (BlocksNew.Find(UpVector) && BlocksNew[UpVector] == EBlock::Sand)
-					{
-						LocalPosition = UpVector;
-						BlocksNew[FIntVector(LocalPosition)] = EBlock::Air;
-
-						const auto Transform = FTransform(FRotator::ZeroRotator,
-						                                  FVector(
-							                                  (GetActorLocation().X + LocalPosition.X * 100) + 50,
-							                                  (GetActorLocation().Y + LocalPosition.Y * 100) + 50,
-							                                  (GetActorLocation().Z + LocalPosition.Z * 100) + 50),
-						                                  FVector::OneVector);
-						const auto SpawnEntity = GetWorld()->SpawnActorDeferred<ABlockEntity>(
-							ABlockEntity::StaticClass(), Transform, this);
-						UGameplayStatics::FinishSpawningActor(SpawnEntity, Transform);
-					}
-				}
-			}
-
-			ClearMesh();
-			GenerateMesh();
-			ApplyMesh();
-		}
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("Block not find: %s"), *Position.ToString())
-	}
-}
 
 void AChunk::GenerateBiomes()
 {
@@ -135,15 +85,15 @@ void AChunk::GenerateBiomes()
 			int RiverHole;
 			int Mountain;
 
-			const float Xpos = (x * 100 + Location.X) / 100;
-			const float Ypos = (y * 100 + Location.Y) / 100;
+			const float X_Pos = (x * 100 + Location.X) / 100;
+			const float Y_Pos = (y * 100 + Location.Y) / 100;
 
-			const auto Alt = 2 * abs(Altitude->GetNoise(Xpos, Ypos));
-			const auto Temp = 2 * abs(Temperature->GetNoise(Xpos, Ypos));
-			const auto Moist = 2 * abs(Moisture->GetNoise(Xpos, Ypos));
+			const auto Alt = 2 * abs(Altitude->GetNoise(X_Pos, Y_Pos));
+			const auto Temp = 2 * abs(Temperature->GetNoise(X_Pos, Y_Pos));
+			const auto Moist = 2 * abs(Moisture->GetNoise(X_Pos, Y_Pos));
 
-			int Height = FMath::Clamp(FMath::RoundToInt((Noise->GetNoise(Xpos, Ypos) + 1) * Size.Z / 2), 1,
-			                                Size.Z);
+			int Height = FMath::Clamp(FMath::RoundToInt((Noise->GetNoise(X_Pos, Y_Pos) + 1) * Size.Z / 2), 1,
+			                          Size.Z);
 
 
 			if (Alt <= 0.14)
@@ -177,19 +127,6 @@ void AChunk::GenerateBiomes()
 				if (constexpr int StartStone = 5; z < Height - StartStone)
 				{
 					BlocksNew.Add(FIntVector(x, y, z), EBlock::Stone);
-
-					//const float Zpos = (z * 100 + Location.Z) / 100;
-					// float Cave = FMath::Clamp(CaveNoise->GetNoise(Xpos, Ypos, Zpos), -1.0, 1.0);
-					//
-					// if (Cave <= 0)
-					// {
-					// 	BlocksNew.Add(FIntVector(x, y, z), EBlock::Air);
-					// }
-					// else if (Cave == 0)
-					// {
-					// 	BlocksNew.Add(FIntVector(x, y, z), EBlock::Air);
-					// }
-
 					continue;
 				}
 
@@ -206,20 +143,20 @@ void AChunk::GenerateBiomes()
 								BlocksNew.Add(FIntVector(x, y, Height + i), EBlock::Water);
 							}
 						}
-
 					}
 					else if (Alt >= 0.1 && Alt <= 0.15)
 					{
 						BlocksNew.Add(FIntVector(x, y, z), EBlock::Sand);
 						BlocksNew.Add(FIntVector(x, y, static_cast<int>(WaterLevel)), EBlock::Water);
-						if(Height < WaterLevel)
+						if (Height < WaterLevel)
 						{
 							const int dif = WaterLevel - Height;
 							for (int i = 0; i < dif; i++)
 							{
 								BlocksNew.Add(FIntVector(x, y, Height + i), EBlock::Water);
 							}
-						} else
+						}
+						else
 						{
 							BlocksNew.Add(FIntVector(x, y, WaterLevel), EBlock::Water);
 						}
@@ -498,16 +435,6 @@ void AChunk::CreateQuad(FMask Mask, const int Width, const int Height, FIntVecto
 	VertexCount += 4;
 }
 
-int AChunk::GetBlockIndex(int X, int Y, int Z) const
-{
-	if (X < 0 || Y < 0 || Z < 0)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Warning x - %i, y - %i, z - %i"), X, Y, Z);
-	}
-
-	return Z * Size.X * Size.Y + Y * Size.X + X;
-}
-
 EBlock AChunk::GetBlock(FIntVector Index) const
 {
 	//UE_LOG(LogTemp, Warning, TEXT("Block position : %s"), *Index.ToString());
@@ -570,6 +497,73 @@ int AChunk::GetTextureOverlay(const EBlock Block, const FVector& Normal)
 			if (Normal == FVector::UpVector) return 0;
 			return 1;
 		}
+	case EBlock::Snow:
+		{
+			if (Normal == FVector::UpVector) return 0;
+			return 1;
+		}
 	default: return 255;
 	}
+}
+
+void AChunk::ModifyVoxel(const FIntVector Position, const EBlock Block)
+{
+	if (BlocksNew.Find(Position))
+	{
+		CheckBlockPhysic(Position, Block);
+		ClearMesh();
+		GenerateMesh();
+		ApplyMesh();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Block not find: %s"), *Position.ToString())
+	}
+}
+
+void AChunk::CheckBlockPhysic(const FIntVector Position, const EBlock Block)
+{
+	if (
+		const auto DownVector = Position + static_cast<FIntVector>(FVector::DownVector);
+		BlocksNew.Find(DownVector)
+		&& BlocksNew[DownVector] == EBlock::Air
+		&& Block == EBlock::Sand)
+	{
+		SpawnEntityBlock(Position);
+	}
+	else
+	{
+		BlocksNew[Position] = Block;
+		if (Block == EBlock::Air)
+		{
+			auto LocalPosition = Position;
+			for (int i = Position.Z; i < Size.Z; i++)
+			{
+				if (
+					auto UpVector = LocalPosition + static_cast<FIntVector>(FVector::UpVector);
+					BlocksNew.Find(UpVector)
+					&& BlocksNew[UpVector] == EBlock::Sand)
+				{
+					LocalPosition = UpVector;
+					BlocksNew[FIntVector(LocalPosition)] = EBlock::Air;
+
+					SpawnEntityBlock(LocalPosition);
+				}
+			}
+		}
+	}
+}
+
+void AChunk::SpawnEntityBlock(const FIntVector Position)
+{
+	const auto Transform = FTransform(FRotator::ZeroRotator,
+	                                  FVector(
+		                                  (GetActorLocation().X + Position.X * 100) + 50,
+		                                  (GetActorLocation().Y + Position.Y * 100) + 50,
+		                                  (GetActorLocation().Z + Position.Z * 100) + 50),
+	                                  FVector::OneVector);
+	const auto SpawnEntity = GetWorld()->SpawnActorDeferred<ABlockEntity>(
+		ABlockEntity::StaticClass(), Transform, this);
+
+	UGameplayStatics::FinishSpawningActor(SpawnEntity, Transform);
 }

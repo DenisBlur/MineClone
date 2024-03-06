@@ -3,9 +3,6 @@
 
 #include "ChunkManager.h"
 
-#include "VoxelFunctionLibrary.h"
-#include "Chunk/Chunk.h"
-#include "Chunk/Chunk.h"
 #include "Chunk/Chunk.h"
 #include "Kismet/GameplayStatics.h"
 #include "Utils/Enums.h"
@@ -20,9 +17,9 @@ AChunkManager::AChunkManager()
 
 void AChunkManager::ModifyVoxel(const FVector Position, const FVector Normal, EBlock Block)
 {
-	const auto ChunkPos = WorldToChunkPosition(Position + (Normal * 10));
-
-	if (Chunks.Find(FIntVector(ChunkPos.X, ChunkPos.Y, 0)))
+	if (
+		const auto ChunkPos = WorldToChunkPosition(Position + (Normal * 10));
+		Chunks.Find(FIntVector(ChunkPos.X, ChunkPos.Y, 0)))
 	{
 		const FIntVector Result = WorldToLocalBlockPosition(ChunkPos, Position) + FIntVector(Normal);
 		Chunks[FIntVector(ChunkPos.X, ChunkPos.Y, 0)]->ModifyVoxel(Result, Block);
@@ -50,9 +47,7 @@ void AChunkManager::GenerateWorld()
 			SpawnChunk->Size = Size;
 			SpawnChunk->Material = Material;
 			SpawnChunk->Seed = Seed;
-			SpawnChunk->Water = Water;
 			SpawnChunk->WaterLevel = WaterLevel;
-			SpawnChunk->WaterMaterial = WaterMaterial;
 
 			Chunks.Add(FIntVector(X, Y, 0), SpawnChunk);
 
@@ -67,17 +62,13 @@ FIntVector AChunkManager::WorldToBlockPosition(const FVector& Position)
 }
 
 FIntVector AChunkManager::WorldToLocalBlockPosition(FIntVector ChunkPos, const FVector& Position) const
-{
-	const auto ChunkPosCurrent = WorldToChunkPosition(Position);
+{;
 	auto Result = WorldToBlockPosition(Position) - ChunkPos * Size;
 
 	// Negative Normalization
 	if (ChunkPos.X < 0) Result.X--;
 	if (ChunkPos.Y < 0) Result.Y--;
 	if (ChunkPos.Z < 0) Result.Z--;
-
-	//if (ChunkPos.X != ChunkPosCurrent.X) Result.X = Result.X - 1;
-	//if (ChunkPos.Y != ChunkPosCurrent.Y) Result.Y = Result.Y - 1;
 
 	return Result;
 }
